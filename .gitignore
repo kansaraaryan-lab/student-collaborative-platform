@@ -1,0 +1,13 @@
+# Hide environment
+.env
+
+__pycache__/
+*.pyc
+
+.venv/
+venv/
+
+node_modules/
+dist/
+build/
+.pytest_cache/
