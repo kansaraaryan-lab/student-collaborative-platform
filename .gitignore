@@ -11,3 +11,7 @@ node_modules/
 dist/
 build/
 .pytest_cache/
+
+.vscode/
+
+.idea/
