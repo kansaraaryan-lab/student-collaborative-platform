@@ -1,13 +1,15 @@
 import customtkinter as ctk
+from tkinter import messagebox
 
-from api_client import get_events
+from api_client import (
+    get_events,
+    create_event,
+    update_event,
+    delete_event,
+)
 
 
 class EventsPage(ctk.CTkFrame):
-
-    # =========================================================
-    # DESIGN SYSTEM
-    # =========================================================
 
     BG = "#0B0D10"
     CARD = "#111418"
@@ -45,10 +47,6 @@ class EventsPage(ctk.CTkFrame):
 
     def create_ui(self):
 
-        # -----------------------------------------------------
-        # Header
-        # -----------------------------------------------------
-
         header = ctk.CTkFrame(
             self,
             fg_color="transparent"
@@ -60,8 +58,28 @@ class EventsPage(ctk.CTkFrame):
             pady=(32, 0)
         )
 
-        ctk.CTkLabel(
+        title_row = ctk.CTkFrame(
             header,
+            fg_color="transparent"
+        )
+
+        title_row.pack(
+            fill="x"
+        )
+
+        title_section = ctk.CTkFrame(
+            title_row,
+            fg_color="transparent"
+        )
+
+        title_section.pack(
+            side="left",
+            fill="x",
+            expand=True
+        )
+
+        ctk.CTkLabel(
+            title_section,
             text="Events",
             font=("Segoe UI", 30, "bold"),
             text_color=self.TEXT_PRIMARY
@@ -70,7 +88,7 @@ class EventsPage(ctk.CTkFrame):
         )
 
         ctk.CTkLabel(
-            header,
+            title_section,
             text="Discover what's happening across your college.",
             font=("Segoe UI", 14),
             text_color=self.TEXT_SECONDARY
@@ -79,9 +97,20 @@ class EventsPage(ctk.CTkFrame):
             pady=(5, 0)
         )
 
-        # -----------------------------------------------------
-        # Filter Bar
-        # -----------------------------------------------------
+        ctk.CTkButton(
+            title_row,
+            text="+ Create Event",
+            width=145,
+            height=40,
+            corner_radius=9,
+            fg_color=self.ACCENT,
+            hover_color=self.ACCENT_HOVER,
+            font=("Segoe UI", 13, "bold"),
+            command=self.open_create_event
+        ).pack(
+            side="right",
+            pady=(5, 0)
+        )
 
         filter_wrapper = ctk.CTkFrame(
             self,
@@ -133,10 +162,6 @@ class EventsPage(ctk.CTkFrame):
 
         self.update_filter_buttons()
 
-        # -----------------------------------------------------
-        # Events Container
-        # -----------------------------------------------------
-
         self.events_container = ctk.CTkScrollableFrame(
             self,
             fg_color="transparent",
@@ -152,7 +177,7 @@ class EventsPage(ctk.CTkFrame):
         )
 
     # =========================================================
-    # FILTER BUTTON
+    # FILTER
     # =========================================================
 
     def create_filter_button(
@@ -182,21 +207,12 @@ class EventsPage(ctk.CTkFrame):
 
         self.filter_buttons[status] = button
 
-    # =========================================================
-    # STATUS FILTER
-    # =========================================================
-
     def change_status(self, status):
 
         self.current_status = status
 
         self.update_filter_buttons()
-
         self.load_events()
-
-    # =========================================================
-    # UPDATE FILTER BUTTONS
-    # =========================================================
 
     def update_filter_buttons(self):
 
@@ -234,15 +250,11 @@ class EventsPage(ctk.CTkFrame):
             )
 
             if not events:
-
                 self.show_empty()
                 return
 
             for event in events:
-
-                self.create_event_card(
-                    event
-                )
+                self.create_event_card(event)
 
         except Exception as error:
 
@@ -269,10 +281,6 @@ class EventsPage(ctk.CTkFrame):
             pady=7
         )
 
-        # -----------------------------------------------------
-        # Main Content
-        # -----------------------------------------------------
-
         content = ctk.CTkFrame(
             card,
             fg_color="transparent"
@@ -283,10 +291,6 @@ class EventsPage(ctk.CTkFrame):
             padx=24,
             pady=20
         )
-
-        # -----------------------------------------------------
-        # Top Row
-        # -----------------------------------------------------
 
         top_row = ctk.CTkFrame(
             content,
@@ -333,10 +337,6 @@ class EventsPage(ctk.CTkFrame):
             self.INFO
         )
 
-        # -----------------------------------------------------
-        # Description
-        # -----------------------------------------------------
-
         description = event.get(
             "description",
             ""
@@ -356,10 +356,6 @@ class EventsPage(ctk.CTkFrame):
                 pady=(12, 16)
             )
 
-        # -----------------------------------------------------
-        # Information Grid
-        # -----------------------------------------------------
-
         info_frame = ctk.CTkFrame(
             content,
             fg_color="transparent"
@@ -370,38 +366,288 @@ class EventsPage(ctk.CTkFrame):
             pady=(4, 0)
         )
 
-        location = event.get(
-            "location",
-            "Not specified"
-        )
-
-        start_time = event.get(
-            "start_time",
-            "Not specified"
-        )
-
-        end_time = event.get(
-            "end_time",
-            "Not specified"
-        )
-
         self.create_info_item(
             info_frame,
             "LOCATION",
-            location
+            event.get("location") or "Not specified"
         )
 
         self.create_info_item(
             info_frame,
             "START",
-            start_time
+            event.get("start_time", "Not specified")
         )
 
         self.create_info_item(
             info_frame,
             "END",
-            end_time
+            event.get("end_time", "Not specified")
         )
+
+        # -----------------------------------------------------
+        # Action buttons
+        # -----------------------------------------------------
+
+        actions = ctk.CTkFrame(
+            content,
+            fg_color="transparent"
+        )
+
+        actions.pack(
+            fill="x",
+            pady=(18, 0)
+        )
+
+        ctk.CTkButton(
+            actions,
+            text="Edit",
+            width=85,
+            height=32,
+            corner_radius=7,
+            fg_color=self.INFO,
+            hover_color="#2563EB",
+            command=lambda e=event: self.open_edit_event(e)
+        ).pack(
+            side="left",
+            padx=(0, 8)
+        )
+
+        ctk.CTkButton(
+            actions,
+            text="Delete",
+            width=85,
+            height=32,
+            corner_radius=7,
+            fg_color=self.DANGER,
+            hover_color="#DC2626",
+            command=lambda e=event: self.confirm_delete(e)
+        ).pack(
+            side="left"
+        )
+
+    # =========================================================
+    # CREATE / EDIT EVENT
+    # =========================================================
+
+    def open_create_event(self):
+
+        self.open_event_modal()
+
+    def open_edit_event(self, event):
+
+        self.open_event_modal(event)
+
+    def open_event_modal(self, event=None):
+
+        editing = event is not None
+
+        modal = ctk.CTkToplevel(
+            self
+        )
+
+        modal.title(
+            "Edit Event" if editing else "Create Event"
+        )
+
+        modal.geometry(
+            "520x650"
+        )
+
+        modal.resizable(
+            False,
+            False
+        )
+
+        modal.transient(
+            self.winfo_toplevel()
+        )
+
+        modal.grab_set()
+
+        ctk.CTkLabel(
+            modal,
+            text="Edit Event" if editing else "Create Event",
+            font=("Segoe UI", 24, "bold")
+        ).pack(
+            pady=(25, 20)
+        )
+
+        def add_field(label, placeholder="", value=""):
+
+            ctk.CTkLabel(
+                modal,
+                text=label,
+                font=("Segoe UI", 12, "bold")
+            ).pack(
+                anchor="w",
+                padx=55
+            )
+
+            entry = ctk.CTkEntry(
+                modal,
+                width=400,
+                height=40,
+                placeholder_text=placeholder
+            )
+
+            entry.pack(
+                pady=(5, 12)
+            )
+
+            if value:
+                entry.insert(
+                    0,
+                    str(value)
+                )
+
+            return entry
+
+        title_entry = add_field(
+            "Title",
+            "Event title",
+            event.get("title", "") if editing else ""
+        )
+
+        description_entry = add_field(
+            "Description",
+            "Event description",
+            event.get("description", "") if editing else ""
+        )
+
+        type_entry = add_field(
+            "Event Type",
+            "Hackathon / Workshop / Seminar",
+            event.get("event_type", "") if editing else ""
+        )
+
+        start_entry = add_field(
+            "Start Time",
+            "2026-09-25T10:00:00",
+            event.get("start_time", "") if editing else ""
+        )
+
+        end_entry = add_field(
+            "End Time",
+            "2026-09-25T17:00:00",
+            event.get("end_time", "") if editing else ""
+        )
+
+        location_entry = add_field(
+            "Location",
+            "Seminar Hall",
+            event.get("location", "") if editing else ""
+        )
+
+        def save():
+
+            title = title_entry.get().strip()
+            description = description_entry.get().strip()
+            event_type = type_entry.get().strip()
+            start_time = start_entry.get().strip()
+            end_time = end_entry.get().strip()
+            location = location_entry.get().strip()
+
+            if not title:
+                messagebox.showerror(
+                    "Validation Error",
+                    "Please enter an event title.",
+                    parent=modal
+                )
+                return
+
+            if not event_type:
+                messagebox.showerror(
+                    "Validation Error",
+                    "Please enter an event type.",
+                    parent=modal
+                )
+                return
+
+            if not start_time or not end_time:
+                messagebox.showerror(
+                    "Validation Error",
+                    "Start time and end time are required.",
+                    parent=modal
+                )
+                return
+
+            try:
+
+                if editing:
+
+                    update_event(
+                        event["id"],
+                        title=title,
+                        description=description,
+                        event_type=event_type,
+                        start_time=start_time,
+                        end_time=end_time,
+                        location=location
+                    )
+
+                else:
+
+                    create_event(
+                        title,
+                        description,
+                        event_type,
+                        start_time,
+                        end_time,
+                        location
+                    )
+
+                modal.destroy()
+                self.load_events()
+
+            except Exception as error:
+
+                messagebox.showerror(
+                    "API Error",
+                    str(error),
+                    parent=modal
+                )
+
+        ctk.CTkButton(
+            modal,
+            text="Save Event",
+            width=400,
+            height=42,
+            corner_radius=8,
+            fg_color=self.ACCENT,
+            hover_color=self.ACCENT_HOVER,
+            command=save
+        ).pack(
+            pady=15
+        )
+
+    # =========================================================
+    # DELETE EVENT
+    # =========================================================
+
+    def confirm_delete(self, event):
+
+        confirmed = messagebox.askyesno(
+            "Delete Event",
+            f"Are you sure you want to delete:\n\n"
+            f"{event.get('title', 'this event')}?"
+        )
+
+        if not confirmed:
+            return
+
+        try:
+
+            delete_event(
+                event["id"]
+            )
+
+            self.load_events()
+
+        except Exception as error:
+
+            self.show_error(
+                f"Unable to delete event:\n\n{error}"
+            )
 
     # =========================================================
     # BADGE
@@ -473,7 +719,7 @@ class EventsPage(ctk.CTkFrame):
         )
 
     # =========================================================
-    # EMPTY STATE
+    # EMPTY
     # =========================================================
 
     def show_empty(self):
@@ -510,7 +756,7 @@ class EventsPage(ctk.CTkFrame):
         )
 
     # =========================================================
-    # ERROR STATE
+    # ERROR
     # =========================================================
 
     def show_error(self, message):

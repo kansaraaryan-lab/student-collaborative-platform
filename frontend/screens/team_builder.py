@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from tkinter import messagebox
 
 from api_client import (
     get_students,
@@ -13,10 +14,26 @@ from api_client import (
 
 class TeamBuilderPage(ctk.CTkFrame):
 
+    BG = "#0B0D10"
+    CARD = "#111418"
+    CARD_HOVER = "#161A20"
+    BORDER = "#242932"
+
+    TEXT_PRIMARY = "#F5F7FA"
+    TEXT_SECONDARY = "#9AA3B2"
+    TEXT_MUTED = "#687180"
+
+    ACCENT = "#7C3AED"
+    ACCENT_HOVER = "#6D28D9"
+
+    DANGER = "#EF4444"
+    INFO = "#3B82F6"
+
     def __init__(self, parent):
+
         super().__init__(
             parent,
-            fg_color="transparent"
+            fg_color=self.BG
         )
 
         self.students = []
@@ -36,32 +53,76 @@ class TeamBuilderPage(ctk.CTkFrame):
 
     def create_ui(self):
 
-        # ---------- Header ----------
-
-        ctk.CTkLabel(
+        header = ctk.CTkFrame(
             self,
-            text="Team Builder",
-            font=("Arial", 30, "bold")
-        ).pack(
-            anchor="w",
+            fg_color="transparent"
+        )
+
+        header.pack(
+            fill="x",
             padx=35,
-            pady=(30, 5)
+            pady=(30, 0)
+        )
+
+        title_row = ctk.CTkFrame(
+            header,
+            fg_color="transparent"
+        )
+
+        title_row.pack(
+            fill="x"
+        )
+
+        title_section = ctk.CTkFrame(
+            title_row,
+            fg_color="transparent"
+        )
+
+        title_section.pack(
+            side="left",
+            fill="x",
+            expand=True
         )
 
         ctk.CTkLabel(
-            self,
-            text="Create teams and manage members for events and projects.",
-            font=("Arial", 14)
+            title_section,
+            text="Team Builder",
+            font=("Segoe UI", 30, "bold"),
+            text_color=self.TEXT_PRIMARY
         ).pack(
-            anchor="w",
-            padx=35
+            anchor="w"
         )
 
-        # ---------- Controls ----------
+        ctk.CTkLabel(
+            title_section,
+            text="Create teams and manage members for events and projects.",
+            font=("Segoe UI", 14),
+            text_color=self.TEXT_SECONDARY
+        ).pack(
+            anchor="w",
+            pady=(5, 0)
+        )
+
+        ctk.CTkButton(
+            title_row,
+            text="+ Create Team",
+            width=140,
+            height=40,
+            corner_radius=9,
+            fg_color=self.ACCENT,
+            hover_color=self.ACCENT_HOVER,
+            font=("Segoe UI", 13, "bold"),
+            command=self.open_create_team
+        ).pack(
+            side="right"
+        )
 
         controls = ctk.CTkFrame(
             self,
-            fg_color="transparent"
+            fg_color=self.CARD,
+            border_width=1,
+            border_color=self.BORDER,
+            corner_radius=12
         )
 
         controls.pack(
@@ -80,24 +141,15 @@ class TeamBuilderPage(ctk.CTkFrame):
 
         self.team_dropdown.pack(
             side="left",
-            padx=(0, 10)
+            padx=12,
+            pady=12
         )
-
-        ctk.CTkButton(
-            controls,
-            text="+ Create Team",
-            width=140,
-            height=40,
-            command=self.open_create_team
-        ).pack(
-            side="left"
-        )
-
-        # ---------- Content ----------
 
         self.content = ctk.CTkScrollableFrame(
             self,
-            fg_color="transparent"
+            fg_color="transparent",
+            scrollbar_button_color=self.BORDER,
+            scrollbar_button_hover_color="#343A46"
         )
 
         self.content.pack(
@@ -119,22 +171,16 @@ class TeamBuilderPage(ctk.CTkFrame):
             self.events = get_events()
             self.teams = get_teams()
 
-            # Student mapping
-
             self.student_map = {
                 f"{student['name']} • {student['college_email']}":
                 student["id"]
                 for student in self.students
             }
 
-            # Event mapping
-
             self.event_map = {
                 event["title"]: event["id"]
                 for event in self.events
             }
-
-            # Team mapping
 
             self.team_map = {
                 team["name"]: team["id"]
@@ -188,13 +234,10 @@ class TeamBuilderPage(ctk.CTkFrame):
         )
 
         if team_id:
-
-            self.load_team(
-                team_id
-            )
+            self.load_team(team_id)
 
     # =========================================================
-    # LOAD SELECTED TEAM
+    # LOAD TEAM
     # =========================================================
 
     def load_team(self, team_id):
@@ -221,7 +264,8 @@ class TeamBuilderPage(ctk.CTkFrame):
                 return
 
             self.create_team_header(
-                team
+                team,
+                members
             )
 
             self.create_members_section(
@@ -239,10 +283,17 @@ class TeamBuilderPage(ctk.CTkFrame):
     # TEAM HEADER
     # =========================================================
 
-    def create_team_header(self, team):
+    def create_team_header(
+        self,
+        team,
+        members
+    ):
 
         card = ctk.CTkFrame(
             self.content,
+            fg_color=self.CARD,
+            border_width=1,
+            border_color=self.BORDER,
             corner_radius=15
         )
 
@@ -251,17 +302,43 @@ class TeamBuilderPage(ctk.CTkFrame):
             pady=(0, 20)
         )
 
-        ctk.CTkLabel(
+        top = ctk.CTkFrame(
             card,
+            fg_color="transparent"
+        )
+
+        top.pack(
+            fill="x",
+            padx=25,
+            pady=(22, 5)
+        )
+
+        ctk.CTkLabel(
+            top,
             text=team.get(
                 "name",
                 "Unnamed Team"
             ),
-            font=("Arial", 24, "bold")
+            font=("Segoe UI", 24, "bold"),
+            text_color=self.TEXT_PRIMARY
         ).pack(
-            anchor="w",
-            padx=25,
-            pady=(22, 5)
+            side="left"
+        )
+
+        status = team.get(
+            "status",
+            "active"
+        )
+
+        ctk.CTkLabel(
+            top,
+            text=f" {status.upper()} ",
+            font=("Segoe UI", 10, "bold"),
+            text_color="#22C55E",
+            fg_color="#22C55E22",
+            corner_radius=7
+        ).pack(
+            side="right"
         )
 
         description = team.get(
@@ -275,9 +352,30 @@ class TeamBuilderPage(ctk.CTkFrame):
         ctk.CTkLabel(
             card,
             text=description,
-            font=("Arial", 13),
-            wraplength=800,
+            font=("Segoe UI", 13),
+            text_color=self.TEXT_SECONDARY,
+            wraplength=850,
             justify="left"
+        ).pack(
+            anchor="w",
+            padx=25,
+            pady=(0, 12)
+        )
+
+        max_members = team.get(
+            "max_members",
+            "-"
+        )
+
+        member_count = len(
+            members
+        )
+
+        ctk.CTkLabel(
+            card,
+            text=f"Members: {member_count} / {max_members}",
+            font=("Segoe UI", 12),
+            text_color=self.TEXT_MUTED
         ).pack(
             anchor="w",
             padx=25,
@@ -285,7 +383,7 @@ class TeamBuilderPage(ctk.CTkFrame):
         )
 
     # =========================================================
-    # MEMBERS SECTION
+    # MEMBERS
     # =========================================================
 
     def create_members_section(
@@ -307,7 +405,8 @@ class TeamBuilderPage(ctk.CTkFrame):
         ctk.CTkLabel(
             header,
             text="Team Members",
-            font=("Arial", 20, "bold")
+            font=("Segoe UI", 20, "bold"),
+            text_color=self.TEXT_PRIMARY
         ).pack(
             side="left"
         )
@@ -317,6 +416,9 @@ class TeamBuilderPage(ctk.CTkFrame):
             text="+ Add Member",
             width=130,
             height=38,
+            corner_radius=8,
+            fg_color=self.ACCENT,
+            hover_color=self.ACCENT_HOVER,
             command=lambda:
                 self.open_add_member(team_id)
         ).pack(
@@ -327,6 +429,9 @@ class TeamBuilderPage(ctk.CTkFrame):
 
             empty_card = ctk.CTkFrame(
                 self.content,
+                fg_color=self.CARD,
+                border_width=1,
+                border_color=self.BORDER,
                 corner_radius=12
             )
 
@@ -338,7 +443,8 @@ class TeamBuilderPage(ctk.CTkFrame):
             ctk.CTkLabel(
                 empty_card,
                 text="No members in this team yet.",
-                font=("Arial", 15)
+                font=("Segoe UI", 15),
+                text_color=self.TEXT_SECONDARY
             ).pack(
                 pady=30
             )
@@ -364,6 +470,9 @@ class TeamBuilderPage(ctk.CTkFrame):
 
         card = ctk.CTkFrame(
             self.content,
+            fg_color=self.CARD,
+            border_width=1,
+            border_color=self.BORDER,
             corner_radius=12
         )
 
@@ -372,18 +481,35 @@ class TeamBuilderPage(ctk.CTkFrame):
             pady=5
         )
 
-        student_name = member.get(
-            "name",
-            member.get(
-                "student_name",
-                "Student"
-            )
+        student_id = member.get(
+            "student_id"
         )
 
-        student_email = member.get(
-            "college_email",
-            ""
+        student = next(
+            (
+                student
+                for student in self.students
+                if student["id"] == student_id
+            ),
+            None
         )
+
+        if student:
+
+            student_name = student.get(
+                "name",
+                "Student"
+            )
+
+            student_email = student.get(
+                "college_email",
+                ""
+            )
+
+        else:
+
+            student_name = f"Student #{student_id}"
+            student_email = ""
 
         info = ctk.CTkFrame(
             card,
@@ -399,7 +525,8 @@ class TeamBuilderPage(ctk.CTkFrame):
         ctk.CTkLabel(
             info,
             text=student_name,
-            font=("Arial", 16, "bold")
+            font=("Segoe UI", 16, "bold"),
+            text_color=self.TEXT_PRIMARY
         ).pack(
             anchor="w"
         )
@@ -409,21 +536,21 @@ class TeamBuilderPage(ctk.CTkFrame):
             ctk.CTkLabel(
                 info,
                 text=student_email,
-                font=("Arial", 12)
+                font=("Segoe UI", 12),
+                text_color=self.TEXT_SECONDARY
             ).pack(
                 anchor="w",
                 pady=(3, 0)
             )
-
-        student_id = member.get(
-            "student_id"
-        )
 
         ctk.CTkButton(
             card,
             text="Remove",
             width=90,
             height=35,
+            corner_radius=7,
+            fg_color=self.DANGER,
+            hover_color="#DC2626",
             command=lambda:
                 self.remove_member(
                     team_id,
@@ -444,8 +571,14 @@ class TeamBuilderPage(ctk.CTkFrame):
             self
         )
 
-        modal.title("Create Team")
-        modal.geometry("450x520")
+        modal.title(
+            "Create Team"
+        )
+
+        modal.geometry(
+            "470x550"
+        )
+
         modal.resizable(
             False,
             False
@@ -460,16 +593,17 @@ class TeamBuilderPage(ctk.CTkFrame):
         ctk.CTkLabel(
             modal,
             text="Create Team",
-            font=("Arial", 24, "bold")
+            font=("Segoe UI", 24, "bold")
         ).pack(
-            pady=(30, 20)
+            pady=(25, 20)
         )
 
         # Team name
 
         ctk.CTkLabel(
             modal,
-            text="Team Name"
+            text="Team Name",
+            font=("Segoe UI", 12, "bold")
         ).pack(
             anchor="w",
             padx=65
@@ -490,7 +624,8 @@ class TeamBuilderPage(ctk.CTkFrame):
 
         ctk.CTkLabel(
             modal,
-            text="Description"
+            text="Description",
+            font=("Segoe UI", 12, "bold")
         ).pack(
             anchor="w",
             padx=65
@@ -500,7 +635,7 @@ class TeamBuilderPage(ctk.CTkFrame):
             modal,
             width=320,
             height=40,
-            placeholder_text="Enter team description"
+            placeholder_text="Enter description"
         )
 
         description_entry.pack(
@@ -511,7 +646,8 @@ class TeamBuilderPage(ctk.CTkFrame):
 
         ctk.CTkLabel(
             modal,
-            text="Event"
+            text="Event",
+            font=("Segoe UI", 12, "bold")
         ).pack(
             anchor="w",
             padx=65
@@ -544,52 +680,40 @@ class TeamBuilderPage(ctk.CTkFrame):
 
             ctk.CTkLabel(
                 modal,
-                text="No events available."
+                text="No events available.",
+                text_color=self.TEXT_SECONDARY
             ).pack(
                 pady=10
             )
 
-        # Creator
+        # Max members
 
         ctk.CTkLabel(
             modal,
-            text="Created By"
+            text="Maximum Members",
+            font=("Segoe UI", 12, "bold")
         ).pack(
             anchor="w",
             padx=65
         )
 
-        student_names = list(
-            self.student_map.keys()
+        max_members_dropdown = ctk.CTkComboBox(
+            modal,
+            width=320,
+            height=40,
+            values=[
+                str(number)
+                for number in range(2, 21)
+            ]
         )
 
-        if student_names:
+        max_members_dropdown.pack(
+            pady=(5, 20)
+        )
 
-            creator_dropdown = ctk.CTkComboBox(
-                modal,
-                width=320,
-                height=40,
-                values=student_names
-            )
-
-            creator_dropdown.pack(
-                pady=(5, 15)
-            )
-
-            creator_dropdown.set(
-                student_names[0]
-            )
-
-        else:
-
-            creator_dropdown = None
-
-            ctk.CTkLabel(
-                modal,
-                text="No students available."
-            ).pack(
-                pady=10
-            )
+        max_members_dropdown.set(
+            "4"
+        )
 
         # Save
 
@@ -605,23 +729,13 @@ class TeamBuilderPage(ctk.CTkFrame):
 
             if not name:
 
-                self.show_error(
-                    "Please enter a team name."
+                messagebox.showerror(
+                    "Validation Error",
+                    "Please enter a team name.",
+                    parent=modal
                 )
 
                 return
-
-            if not creator_dropdown:
-
-                self.show_error(
-                    "No student is available to create the team."
-                )
-
-                return
-
-            created_by = self.student_map.get(
-                creator_dropdown.get()
-            )
 
             event_id = None
 
@@ -633,11 +747,37 @@ class TeamBuilderPage(ctk.CTkFrame):
 
             try:
 
+                max_members = int(
+                    max_members_dropdown.get()
+                )
+
+            except ValueError:
+
+                messagebox.showerror(
+                    "Validation Error",
+                    "Maximum members must be a number.",
+                    parent=modal
+                )
+
+                return
+
+            if max_members < 2 or max_members > 20:
+
+                messagebox.showerror(
+                    "Validation Error",
+                    "Maximum members must be between 2 and 20.",
+                    parent=modal
+                )
+
+                return
+
+            try:
+
                 create_team(
                     name,
                     description,
                     event_id,
-                    created_by
+                    max_members
                 )
 
                 modal.destroy()
@@ -646,8 +786,10 @@ class TeamBuilderPage(ctk.CTkFrame):
 
             except Exception as error:
 
-                self.show_error(
-                    f"Unable to create team:\n\n{error}"
+                messagebox.showerror(
+                    "API Error",
+                    str(error),
+                    parent=modal
                 )
 
         ctk.CTkButton(
@@ -655,10 +797,11 @@ class TeamBuilderPage(ctk.CTkFrame):
             text="Create Team",
             width=320,
             height=42,
+            corner_radius=8,
+            fg_color=self.ACCENT,
+            hover_color=self.ACCENT_HOVER,
             command=save_team
-        ).pack(
-            pady=10
-        )
+        ).pack()
 
     # =========================================================
     # ADD MEMBER
@@ -670,8 +813,14 @@ class TeamBuilderPage(ctk.CTkFrame):
             self
         )
 
-        modal.title("Add Team Member")
-        modal.geometry("450x300")
+        modal.title(
+            "Add Team Member"
+        )
+
+        modal.geometry(
+            "450x300"
+        )
+
         modal.resizable(
             False,
             False
@@ -686,7 +835,7 @@ class TeamBuilderPage(ctk.CTkFrame):
         ctk.CTkLabel(
             modal,
             text="Add Team Member",
-            font=("Arial", 22, "bold")
+            font=("Segoe UI", 22, "bold")
         ).pack(
             pady=(30, 20)
         )
@@ -699,7 +848,8 @@ class TeamBuilderPage(ctk.CTkFrame):
 
             ctk.CTkLabel(
                 modal,
-                text="No students available."
+                text="No students available.",
+                text_color=self.TEXT_SECONDARY
             ).pack(
                 pady=30
             )
@@ -727,6 +877,9 @@ class TeamBuilderPage(ctk.CTkFrame):
                 student_dropdown.get()
             )
 
+            if not student_id:
+                return
+
             try:
 
                 add_team_member(
@@ -742,8 +895,10 @@ class TeamBuilderPage(ctk.CTkFrame):
 
             except Exception as error:
 
-                self.show_error(
-                    f"Unable to add member:\n\n{error}"
+                messagebox.showerror(
+                    "API Error",
+                    str(error),
+                    parent=modal
                 )
 
         ctk.CTkButton(
@@ -751,6 +906,9 @@ class TeamBuilderPage(ctk.CTkFrame):
             text="Add Member",
             width=320,
             height=42,
+            corner_radius=8,
+            fg_color=self.ACCENT,
+            hover_color=self.ACCENT_HOVER,
             command=add_member
         ).pack(
             pady=25
@@ -767,6 +925,14 @@ class TeamBuilderPage(ctk.CTkFrame):
     ):
 
         if not student_id:
+            return
+
+        confirmed = messagebox.askyesno(
+            "Remove Member",
+            "Are you sure you want to remove this member?"
+        )
+
+        if not confirmed:
             return
 
         try:
@@ -787,13 +953,16 @@ class TeamBuilderPage(ctk.CTkFrame):
             )
 
     # =========================================================
-    # EMPTY STATE
+    # EMPTY
     # =========================================================
 
     def show_no_team(self):
 
         card = ctk.CTkFrame(
             self.content,
+            fg_color=self.CARD,
+            border_width=1,
+            border_color=self.BORDER,
             corner_radius=15
         )
 
@@ -805,7 +974,8 @@ class TeamBuilderPage(ctk.CTkFrame):
         ctk.CTkLabel(
             card,
             text="No teams created yet.",
-            font=("Arial", 20, "bold")
+            font=("Segoe UI", 20, "bold"),
+            text_color=self.TEXT_PRIMARY
         ).pack(
             pady=(35, 5)
         )
@@ -813,7 +983,8 @@ class TeamBuilderPage(ctk.CTkFrame):
         ctk.CTkLabel(
             card,
             text="Create a team to start collaborating.",
-            font=("Arial", 13)
+            font=("Segoe UI", 13),
+            text_color=self.TEXT_SECONDARY
         ).pack(
             pady=(0, 35)
         )
@@ -828,8 +999,14 @@ class TeamBuilderPage(ctk.CTkFrame):
             self
         )
 
-        window.title("Team Builder")
-        window.geometry("450x250")
+        window.title(
+            "Team Builder"
+        )
+
+        window.geometry(
+            "450x250"
+        )
+
         window.resizable(
             False,
             False
@@ -843,7 +1020,8 @@ class TeamBuilderPage(ctk.CTkFrame):
             window,
             text=message,
             wraplength=380,
-            font=("Arial", 14)
+            font=("Segoe UI", 14),
+            text_color=self.TEXT_PRIMARY
         ).pack(
             padx=25,
             pady=(50, 25)

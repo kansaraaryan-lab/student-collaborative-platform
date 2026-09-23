@@ -1,8 +1,12 @@
-
 import requests
+
 
 BASE_URL = "http://127.0.0.1:8000/api/v1"
 
+
+# =========================================================
+# STUDENTS
+# =========================================================
 
 def get_students():
     response = requests.get(
@@ -26,6 +30,10 @@ def create_student(college_email, name, room_id):
     response.raise_for_status()
     return response.json()
 
+
+# =========================================================
+# ROOMS
+# =========================================================
 
 def get_rooms():
     response = requests.get(
@@ -73,6 +81,9 @@ def delete_room(room_id):
     return response.json()
 
 
+# =========================================================
+# SKILLS
+# =========================================================
 
 def get_skills():
     response = requests.get(
@@ -116,6 +127,10 @@ def delete_skill(skill_id):
     return response.json()
 
 
+# =========================================================
+# STUDENT SKILLS
+# =========================================================
+
 def add_student_skill(student_id, skill_id, proficiency):
     response = requests.post(
         f"{BASE_URL}/student-skills",
@@ -147,7 +162,7 @@ def delete_student_skill(student_id, skill_id):
     response.raise_for_status()
     return response.json()
 
-#Events
+
 # =========================================================
 # EVENTS
 # =========================================================
@@ -203,6 +218,59 @@ def create_event(
     return response.json()
 
 
+def update_event(
+    event_id,
+    title=None,
+    description=None,
+    event_type=None,
+    start_time=None,
+    end_time=None,
+    location=None
+):
+    data = {}
+
+    if title is not None:
+        data["title"] = title
+
+    if description is not None:
+        data["description"] = description
+
+    if event_type is not None:
+        data["event_type"] = event_type
+
+    if start_time is not None:
+        data["start_time"] = start_time
+
+    if end_time is not None:
+        data["end_time"] = end_time
+
+    if location is not None:
+        data["location"] = location
+
+    response = requests.patch(
+        f"{BASE_URL}/events/{event_id}",
+        json=data,
+        timeout=5
+    )
+
+    response.raise_for_status()
+    return response.json()
+
+
+def delete_event(event_id):
+    response = requests.delete(
+        f"{BASE_URL}/events/{event_id}",
+        timeout=5
+    )
+
+    response.raise_for_status()
+
+    if response.content:
+        return response.json()
+
+    return None
+
+
 # =========================================================
 # TEAMS
 # =========================================================
@@ -210,7 +278,7 @@ def create_event(
 def get_teams(event_id=None):
     params = {}
 
-    if event_id:
+    if event_id is not None:
         params["event_id"] = event_id
 
     response = requests.get(
@@ -237,7 +305,7 @@ def create_team(
     name,
     description,
     event_id,
-    created_by
+    max_members
 ):
     response = requests.post(
         f"{BASE_URL}/teams",
@@ -245,7 +313,7 @@ def create_team(
             "name": name,
             "description": description,
             "event_id": event_id,
-            "created_by": created_by
+            "max_members": max_members
         },
         timeout=5
     )
@@ -254,10 +322,56 @@ def create_team(
     return response.json()
 
 
-def add_team_member(
+def update_team(
     team_id,
-    student_id
+    name=None,
+    description=None,
+    event_id=None,
+    max_members=None
 ):
+    data = {}
+
+    if name is not None:
+        data["name"] = name
+
+    if description is not None:
+        data["description"] = description
+
+    if event_id is not None:
+        data["event_id"] = event_id
+
+    if max_members is not None:
+        data["max_members"] = max_members
+
+    response = requests.patch(
+        f"{BASE_URL}/teams/{team_id}",
+        json=data,
+        timeout=5
+    )
+
+    response.raise_for_status()
+    return response.json()
+
+
+def delete_team(team_id):
+    response = requests.delete(
+        f"{BASE_URL}/teams/{team_id}",
+        timeout=5
+    )
+
+    response.raise_for_status()
+
+    if response.content:
+        return response.json()
+
+    return None
+
+
+# =========================================================
+# TEAM MEMBERS
+# =========================================================
+
+def add_team_member(team_id, student_id):
     response = requests.post(
         f"{BASE_URL}/teams/{team_id}/members",
         json={
@@ -280,69 +394,47 @@ def get_team_members(team_id):
     return response.json()
 
 
-def remove_team_member(
-    team_id,
-    student_id
-):
+def remove_team_member(team_id, student_id):
     response = requests.delete(
         f"{BASE_URL}/teams/{team_id}/members/{student_id}",
         timeout=5
     )
 
     response.raise_for_status()
-    return response.json()
+
+    if response.content:
+        return response.json()
+
+    return None
+
 
 # =========================================================
-# STUDENT PROFILE
+# TRANSFER LEADERSHIP
 # =========================================================
 
-def get_student_profile(student_id):
-    response = requests.get(
-        f"{BASE_URL}/students/{student_id}/profile",
-        timeout=5
-    )
-    response.raise_for_status()
-    return response.json()
-
-
-def create_student_profile(student_id, bio="", github="", linkedin="", portfolio=""):
+def transfer_team_leadership(team_id, student_id):
     response = requests.post(
-        f"{BASE_URL}/students/{student_id}/profile",
+        f"{BASE_URL}/teams/{team_id}/transfer-leadership",
         json={
-            "bio": bio,
-            "github": github,
-            "linkedin": linkedin,
-            "portfolio": portfolio
+            "student_id": student_id
         },
         timeout=5
     )
+
     response.raise_for_status()
     return response.json()
 
 
-def update_student_profile(student_id, bio="", github="", linkedin="", portfolio=""):
-    response = requests.patch(
-        f"{BASE_URL}/students/{student_id}/profile",
-        json={
-            "bio": bio,
-            "github": github,
-            "linkedin": linkedin,
-            "portfolio": portfolio
-        },
-        timeout=5
-    )
-    response.raise_for_status()
-    return response.json()
-
-# =========================
+# =========================================================
 # STUDENT PROFILE
-# =========================
+# =========================================================
 
 def get_student_profile(student_id):
     response = requests.get(
         f"{BASE_URL}/students/{student_id}/profile",
         timeout=5
     )
+
     response.raise_for_status()
     return response.json()
 
@@ -364,6 +456,7 @@ def create_student_profile(
         },
         timeout=5
     )
+
     response.raise_for_status()
     return response.json()
 
@@ -385,5 +478,6 @@ def update_student_profile(
         },
         timeout=5
     )
+
     response.raise_for_status()
     return response.json()
