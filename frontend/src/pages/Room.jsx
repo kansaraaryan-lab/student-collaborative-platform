@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import { Search,  Users } from "lucide-react";
-import { useParams,useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/useAuth";
 import Avatar from "../components/Avatar";
 import SectionHeader from "../components/SectionHeader";
 import api from "../api/api";
 
 
 export default function Room() {
-  
-const { roomId } = useParams();
+
+
 const {user} = useAuth();
 const navigate = useNavigate();
 const [room, setRoom] = useState(null);

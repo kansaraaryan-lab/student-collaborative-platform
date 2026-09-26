@@ -1,13 +1,11 @@
-import React, {
-  createContext,
+import{
   useCallback,
-  useContext,
   useMemo,
   useState,
 } from "react";
 import api from "../api/api.js";
 
-const AuthContext = createContext(null);
+import { AuthContext } from "./AuthContextValue";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -69,7 +67,7 @@ export function AuthProvider({ children }) {
       logout,
       isAuthenticated: Boolean(user),
     }),
-    [user]
+    [user,login]
   );
 
   return (
@@ -77,8 +75,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-} 
-
-export function useAuth() {
-  return useContext(AuthContext);
 }

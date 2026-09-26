@@ -1,4 +1,3 @@
-import React from "react";
 import { Flame, Pause, Play, Users, Trophy, TreePine } from "lucide-react";
 import { useState } from "react";
 import SectionHeader from "../components/SectionHeader";

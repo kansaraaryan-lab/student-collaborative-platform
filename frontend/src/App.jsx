@@ -1,4 +1,3 @@
-import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import AppLayout from "./components/AppLayout";
@@ -9,7 +8,7 @@ import Room from "./pages/Room";
 import Events from "./pages/Events";
 import TeamBuilder from "./pages/TeamBuilder";
 import Messages from "./pages/Messages";
-import StudyRoom from "./pages/StudyRoom";
+{/*import StudyRoom from "./pages/StudyRoom";*/}
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 

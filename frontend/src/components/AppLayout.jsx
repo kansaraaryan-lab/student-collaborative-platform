@@ -11,7 +11,7 @@ import {
   LogOut,
 } from "lucide-react";
 
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 
 export default function AppLayout() {
   const { user, logout } = useAuth();
@@ -29,7 +29,7 @@ export default function AppLayout() {
       icon: User,
     },
     {
-      label: "Room",
+      label: "My Class",
       path: `/room/${user?.room || "comp-a"}`,
       icon: DoorOpen,
     },
@@ -48,11 +48,11 @@ export default function AppLayout() {
       path: "/messages",
       icon: MessageCircle,
     },
-    {
+    /*{
       label: "Study Room",
       path: "/study-room",
       icon: BookOpen,
-    },
+    },*/
   ];
 
   return (

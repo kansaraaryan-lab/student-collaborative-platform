@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import  { useRef, useEffect, useState } from "react";
 import {
   MoreHorizontal,
   Paperclip,
@@ -6,17 +6,19 @@ import {
   Send,
   Smile,
 } from "lucide-react";
+import EmojiPicker from "emoji-picker-react";
 
 import Avatar from "../components/Avatar";
 import SectionHeader from "../components/SectionHeader";
 import api from "../api/api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 
 export default function Messages() {
   const { user } = useAuth();
   const socketRef = useRef(null);
 
   const [value, setValue] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -66,7 +68,7 @@ export default function Messages() {
         setMessages(
           response.data.map((message) => ({
             ...message,
-            mine: message.sender_id === user.id,
+            mine: Number(message.sender_id) === Number(user.id),
             text: message.content,
             time: new Date(message.created_at).toLocaleTimeString([], {
               hour: "2-digit",
@@ -107,7 +109,7 @@ export default function Messages() {
         {
           ...message,
           id: `ws-${Date.now()}-${Math.random()}`,
-          mine: message.sender_id === user.id,
+          mine: Number(message.sender_id) === Number(user.id),
           text: message.content,
           time: new Date().toLocaleTimeString([], {
             hour: "2-digit",
@@ -130,6 +132,35 @@ export default function Messages() {
       socketRef.current = null;
     };
   }, [user?.id]);
+
+  // Filter messages for the selected student
+  const filteredMessages = messages.filter((message) => {
+    if (!selectedStudent?.id || !user?.id) {
+      return false;
+    }
+
+    return (
+      (Number(message.sender_id) === Number(user.id) &&
+        Number(message.receiver_id) === Number(selectedStudent.id)) ||
+      (Number(message.sender_id) === Number(selectedStudent.id) &&
+        Number(message.receiver_id) === Number(user.id))
+    );
+  });
+
+  // Get sender name
+  const getSenderName = (message) => {
+    // If current user sent the message
+    if (Number(message.sender_id) === Number(user.id)) {
+      return user.name || "You";
+    }
+
+    // Find sender in students list
+    const sender = students.find(
+      (student) => Number(student.id) === Number(message.sender_id)
+    );
+
+    return sender?.name || "Unknown Student";
+  };
 
   // Send message through WebSocket
   const send = () => {
@@ -169,6 +200,7 @@ export default function Messages() {
       />
 
       <div className="messages-layout panel">
+        {/* LEFT SIDE - STUDENT LIST */}
         <aside className="conversation-list">
           <div className="conversation-search">
             <Search size={16} />
@@ -193,6 +225,7 @@ export default function Messages() {
           ))}
         </aside>
 
+        {/* RIGHT SIDE - CHAT */}
         <section className="dm-chat">
           <header className="dm-header">
             <Avatar
@@ -214,29 +247,52 @@ export default function Messages() {
             <MoreHorizontal size={19} />
           </header>
 
+          {/* MESSAGES */}
           <div className="dm-messages">
             {loading && <p>Loading messages...</p>}
 
             {!loading && error && <p>{error}</p>}
 
-            {!loading && !error && messages.length === 0 && (
-              <p>No messages yet.</p>
-            )}
+            {!loading &&
+              !error &&
+              filteredMessages.length === 0 && (
+                <p>No messages yet.</p>
+              )}
 
             {!loading &&
               !error &&
-              messages.map((message) => (
+              filteredMessages.map((message) => (
                 <div
                   className={`bubble ${message.mine ? "mine" : ""}`}
                   key={message.id}
                 >
+                  {/* SENDER NAME */}
+                  <small className="message-sender">
+                    {getSenderName(message)}
+                  </small>
+
+                  {/* MESSAGE */}
                   <p>{message.text}</p>
+
+                  {/* TIME */}
                   <small>{message.time}</small>
                 </div>
               ))}
           </div>
 
-          <div className="dm-input">
+          {/* MESSAGE INPUT */}
+         {showEmojiPicker && (
+  <div className="emoji-picker">
+    <EmojiPicker
+      onEmojiClick={(emojiObject) => {
+        setValue((current) => current + emojiObject.emoji);
+        setShowEmojiPicker(false);
+      }}
+    />
+  </div>
+)}
+
+<div className="dm-input">
             <button className="icon-btn">
               <Paperclip size={18} />
             </button>
@@ -248,9 +304,12 @@ export default function Messages() {
               placeholder="Write a message..."
             />
 
-            <button className="icon-btn">
-              <Smile size={18} />
-            </button>
+            <button
+  className="icon-btn"
+  onClick={() => setShowEmojiPicker((current) => !current)}
+>
+  <Smile size={18} />
+</button>
 
             <button className="primary-icon" onClick={send}>
               <Send size={17} />
@@ -265,4 +324,3 @@ export default function Messages() {
     </>
   );
 }
-

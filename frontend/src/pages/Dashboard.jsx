@@ -1,30 +1,36 @@
-
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowUpRight,
   CalendarDays,
-  Clock3,
   MessageCircle,
   Sparkles,
   Users,
+  UserRound,
+  GraduationCap,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import SectionHeader from "../components/SectionHeader";
 import Avatar from "../components/Avatar";
 import api from "../api/api";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [students, setStudents] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [skills, setSkills] = useState([]);
   const [events, setEvents] = useState([]);
 
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
+        setLoading(true);
+
         const [
           studentsResponse,
           roomsResponse,
@@ -37,41 +43,92 @@ export default function Dashboard() {
           api.get("/events"),
         ]);
 
-        setStudents(studentsResponse.data);
-        setRooms(roomsResponse.data);
-        setSkills(skillsResponse.data);
-        setEvents(eventsResponse.data);
+        setStudents(studentsResponse.data || []);
+        setRooms(roomsResponse.data || []);
+        setSkills(skillsResponse.data || []);
+        setEvents(eventsResponse.data || []);
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
     loadDashboardData();
   }, []);
 
+  const hour = new Date().getHours();
+
+  let greeting = "Good evening";
+
+  if (hour < 12) {
+    greeting = "Good morning";
+  } else if (hour < 17) {
+    greeting = "Good afternoon";
+  }
+
+  const currentRoomId = user?.roomId;
+
+  const classmates = students.filter(
+    (student) =>
+      Number(student.room_id) === Number(currentRoomId) &&
+      Number(student.id) !== Number(user?.id)
+  );
+
+  const currentRoom = rooms.find(
+    (room) => Number(room.id) === Number(currentRoomId)
+  );
+
+  const roomName =
+    currentRoom?.name ||
+    currentRoom?.room_name ||
+    currentRoom?.title ||
+    "Your Class";
+
+  const upcomingEvents = events
+    .filter(
+      (event) =>
+        event.status === "upcoming" ||
+        event.status === "ongoing"
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.start_time) - new Date(b.start_time)
+    )
+    .slice(0, 3);
+
   const studentCount = students.length;
   const roomCount = rooms.length;
   const skillCount = skills.length;
-  const dashboardEvents = events
-  .filter(
-    (event) =>
-      event.status === "upcoming" ||
-      event.status === "ongoing"
-  )
-  .slice(0, 3);
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+
+    return {
+      day: date.getDate(),
+      month: date.toLocaleString("en-US", {
+        month: "short",
+      }),
+      time: date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+  };
 
   return (
     <>
       <SectionHeader
-        title={`Good morning, ${user?.name || "Student"} 👋`}
-        description={
-          user?.year && user?.branch && user?.room
-            ? `${user.year} · ${user.branch} · ${user.room}`
-            : "Student Collaborative Platform"
-        }
+        eyebrow="STUDENT DASHBOARD"
+        title={`${greeting}, ${user?.name || "Student"} 👋`}
+        description="Your central workspace for classes, teammates, skills, messages, and events."
         action={
-          <button className="primary-btn">
-            Complete profile <ArrowUpRight size={17} />
+          <button
+            className="primary-btn"
+            onClick={() => navigate("/profile")}
+          >
+            View profile
+            <ArrowUpRight size={17} />
           </button>
         }
       />
@@ -82,9 +139,11 @@ export default function Dashboard() {
             <Users size={19} />
           </div>
 
-          <span>Total students</span>
-          <strong>{studentCount}</strong>
-          <small>Registered students</small>
+          <span>Classmates</span>
+
+          <strong>{loading ? "—" : classmates.length}</strong>
+
+          <small>Students in your class</small>
         </div>
 
         <div className="stat-card">
@@ -92,9 +151,13 @@ export default function Dashboard() {
             <CalendarDays size={19} />
           </div>
 
-          <span>Chat rooms</span>
-          <strong>{roomCount}</strong>
-          <small>Available chat rooms</small>
+          <span>Upcoming events</span>
+
+          <strong>
+            {loading ? "—" : upcomingEvents.length}
+          </strong>
+
+          <small>Events on your calendar</small>
         </div>
 
         <div className="stat-card">
@@ -102,19 +165,23 @@ export default function Dashboard() {
             <Sparkles size={19} />
           </div>
 
-          <span>Skills</span>
-          <strong>{skillCount}</strong>
-          <small>Available skills</small>
+          <span>Available skills</span>
+
+          <strong>{loading ? "—" : skillCount}</strong>
+
+          <small>Skills for team discovery</small>
         </div>
 
         <div className="stat-card">
           <div className="stat-icon">
-            <Clock3 size={19} />
+            <GraduationCap size={19} />
           </div>
 
-          <span>Study streak</span>
-          <strong>—</strong>
-          <small>Coming soon</small>
+          <span>Academic rooms</span>
+
+          <strong>{loading ? "—" : roomCount}</strong>
+
+          <small>Available class spaces</small>
         </div>
       </div>
 
@@ -122,41 +189,56 @@ export default function Dashboard() {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">YOUR CHAT ROOM</p>
-
-              <h3>{user?.room || "Your Chat Room"}</h3>
+              <p className="eyebrow">MY CLASS</p>
+              <h3>{roomName}</h3>
             </div>
-
-            <a href="/room/comp-a" className="text-link">
-              Open room <ArrowUpRight size={15} />
-            </a>
+            <button
+              className="text-link"
+              onClick={() => navigate(`/room/${currentRoomId}`)}
+            >
+              Open class
+              <ArrowUpRight size={15} />
+            </button>
           </div>
 
           <p className="muted">
-            Connect with classmates, chat, and discover potential project
-            teammates.
+            Connect with your classmates and discover
+            potential teammates for your projects.
           </p>
 
           <div className="member-row">
-            {students.slice(0, 5).map((student) => (
+            {classmates.slice(0, 5).map((student) => (
               <Avatar
                 key={student.id}
-                name={student.name || student.full_name || "Student"}
+                name={student.name || "Student"}
                 online={false}
               />
             ))}
 
-            {students.length > 5 && (
-              <div className="more-avatar">+{students.length - 5}</div>
+            {classmates.length > 5 && (
+              <div className="more-avatar">
+                +{classmates.length - 5}
+              </div>
+            )}
+
+            {classmates.length === 0 && (
+              <span className="muted">
+                No classmates found.
+              </span>
             )}
           </div>
 
           <div className="room-preview">
-            <MessageCircle size={17} />
+            <Users size={17} />
 
             <div>
-              <strong>Room activity</strong>
-              <span>Connect with your classmates</span>
+              <strong>
+                {classmates.length} classmates
+              </strong>
+
+              <span>
+                Explore your academic community
+              </span>
             </div>
           </div>
         </section>
@@ -164,32 +246,47 @@ export default function Dashboard() {
         <section className="panel">
           <div className="panel-header">
             <div>
-              <p className="eyebrow">THIS WEEK</p>
+              <p className="eyebrow">CAMPUS CALENDAR</p>
               <h3>Upcoming events</h3>
             </div>
 
-            <a href="/events" className="text-link">
+            <button
+              className="text-link"
+              onClick={() => navigate("/events")}
+            >
               View all
-            </a>
+              <ArrowUpRight size={15} />
+            </button>
           </div>
 
           <div className="event-list">
-          {dashboardEvents.length === 0 ? (
-  <p className="muted">No upcoming events.</p>
-) : (
-  dashboardEvents.map((event) => {
-                const date = new Date(event.start_time);
+            {loading && (
+              <p className="muted">
+                Loading events...
+              </p>
+            )}
+
+            {!loading && upcomingEvents.length === 0 && (
+              <p className="muted">
+                No upcoming events right now.
+              </p>
+            )}
+
+            {!loading &&
+              upcomingEvents.map((event) => {
+                const eventDate = formatDate(
+                  event.start_time
+                );
 
                 return (
-                  <div className="event-row" key={event.id}>
+                  <div
+                    className="event-row"
+                    key={event.id}
+                  >
                     <div className="date-box">
-                      <strong>{date.getDate()}</strong>
+                      <strong>{eventDate.day}</strong>
 
-                      <span>
-                        {date.toLocaleString("en-US", {
-                          month: "short",
-                        })}
-                      </span>
+                      <span>{eventDate.month}</span>
                     </div>
 
                     <div>
@@ -197,24 +294,80 @@ export default function Dashboard() {
 
                       <span>
                         {event.location || "Campus"} ·{" "}
-                        {date.toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {eventDate.time}
                       </span>
                     </div>
 
-                    <ArrowUpRight
-                      size={16}
-                      className="row-arrow"
-                    />
+                    <span className="event-status">
+                      {event.status === "ongoing"
+                        ? "Ongoing"
+                        : "Upcoming"}
+                    </span>
                   </div>
                 );
-              })
-            )}
+              })}
           </div>
         </section>
       </div>
+
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow">QUICK ACTIONS</p>
+            <h3>What would you like to do?</h3>
+          </div>
+        </div>
+
+        <div className="dashboard-actions">
+          <button
+            className="dashboard-action"
+            onClick={() => navigate("/profile")}
+          >
+            <UserRound size={20} />
+
+            <div>
+              <strong>My Profile</strong>
+              <span>
+                View and update your student profile
+              </span>
+            </div>
+
+            <ArrowUpRight size={16} />
+          </button>
+
+          <button
+            className="dashboard-action"
+            onClick={() => navigate("/messages")}
+          >
+            <MessageCircle size={20} />
+
+            <div>
+              <strong>Messages</strong>
+              <span>
+                Connect with your classmates
+              </span>
+            </div>
+
+            <ArrowUpRight size={16} />
+          </button>
+
+          <button
+            className="dashboard-action"
+            onClick={() => navigate("/team-builder")}
+          >
+            <Users size={20} />
+
+            <div>
+              <strong>Team Builder</strong>
+              <span>
+                Find teammates based on skills
+              </span>
+            </div>
+
+            <ArrowUpRight size={16} />
+          </button>
+        </div>
+      </section>
 
       <section className="panel team-banner">
         <div className="team-banner-icon">
@@ -224,21 +377,21 @@ export default function Dashboard() {
         <div>
           <p className="eyebrow">TEAM BUILDER</p>
 
-          <h3>Find teammates based on your skills</h3>
+          <h3>Build your next project team</h3>
 
           <p className="muted">
-            Find and invite classmates based on their skills and interests.
+            Find classmates with complementary technical
+            skills and send them an invitation.
           </p>
         </div>
 
         <button
           className="secondary-btn"
-          onClick={() => (window.location.href = "/team-builder")}
+          onClick={() => navigate("/team-builder")}
         >
-          Explore matches
+          Find teammates
         </button>
       </section>
     </>
   );
 }
-

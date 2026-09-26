@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Check,
   Filter,
@@ -11,7 +11,7 @@ import {
 import SectionHeader from "../components/SectionHeader";
 import Avatar from "../components/Avatar";
 import api from "../api/api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 
 export default function TeamBuilder() {
   const { user } = useAuth();

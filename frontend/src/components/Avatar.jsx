@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function Avatar({ name = "Student", online = false }) {
   return (
     <div className="avatar-wrapper">
