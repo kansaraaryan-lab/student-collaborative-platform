@@ -19,6 +19,16 @@ class StudentProfile(Base):
         nullable=True,
     )
 
+    year: Mapped[str | None] = mapped_column(
+    String(50),
+    nullable=True,
+     )
+
+    branch: Mapped[str | None] = mapped_column(
+    String(100),
+    nullable=True,
+    )
+
     profile_picture: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,

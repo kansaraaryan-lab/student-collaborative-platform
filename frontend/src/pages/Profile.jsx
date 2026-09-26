@@ -268,20 +268,13 @@ const removeSkill = async (skillId) => {
     user?.email ||
     "";
 
-  const studentYear =
-    student?.year ||
-    user?.year ||
-    "Student";
+  const studentYear = profile?.year || "Not available";
 
-  const studentBranch =
-    student?.branch ||
-    user?.branch ||
-    "Computer Engineering";
+const studentBranch = profile?.branch || "Not available";
 
-  const studentRoom =
-    student?.room ||
-    user?.room ||
-    "No room assigned";
+const studentRoom = student?.room_id
+  ? `Room ${student.room_id}`
+  : "No room assigned";
 
   const technicalSkills = skills
   .filter((item) => item.skill)

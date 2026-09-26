@@ -5,6 +5,8 @@ from pydantic import BaseModel, ConfigDict
 
 class StudentProfileCreate(BaseModel):
     bio: str | None = None
+    year: str | None = None
+    branch: str | None = None
     profile_picture: str | None = None
     github_url: str | None = None
     linkedin_url: str | None = None
@@ -12,6 +14,8 @@ class StudentProfileCreate(BaseModel):
 
 class StudentProfileUpdate(BaseModel):
     bio: str | None = None
+    year: str | None = None
+    branch: str | None = None
     profile_picture: str | None = None
     github_url: str | None = None
     linkedin_url: str | None = None
@@ -20,6 +24,8 @@ class StudentProfileUpdate(BaseModel):
 class StudentProfileResponse(BaseModel):
     student_id: int
     bio: str | None
+    year: str | None
+    branch: str | None
     profile_picture: str | None
     github_url: str | None
     linkedin_url: str | None

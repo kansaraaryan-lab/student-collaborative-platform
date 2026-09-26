@@ -1,47 +1,39 @@
 import React, { useEffect, useState } from "react";
-import { Hash, MoreHorizontal, Search, Send, Users } from "lucide-react";
-import { useParams } from "react-router-dom";
+import { Search,  Users } from "lucide-react";
+import { useParams,useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import Avatar from "../components/Avatar";
 import SectionHeader from "../components/SectionHeader";
 import api from "../api/api";
 
-const initialMessages = [
-  {
-    name: "Rahul",
-    text: "Anyone doing the DBMS assignment?",
-    time: "10:18",
-  },
-  {
-    name: "Priya",
-    text: "Yeah, I started with normalization. I'll share notes.",
-    time: "10:20",
-  },
-  {
-    name: "Aryan",
-    text: "Thanks! That would help.",
-    time: "10:21",
-  },
-];
 
 export default function Room() {
-  const { roomId } = useParams();
-
-  const [room, setRoom] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const [messages, setMessages] = useState(initialMessages);
-  const [value, setValue] = useState("");
-
+  
+const { roomId } = useParams();
+const {user} = useAuth();
+const navigate = useNavigate();
+const [room, setRoom] = useState(null);
+const [members, setMembers] = useState([]);
+const [loading, setLoading] = useState(true);
+const [search , setSearch] = useState("");
+const actualRoomId = user?.roomId;
+ 
   useEffect(() => {
-    if (!roomId) return;
-
+    if (!actualRoomId) return;
     const loadRoom = async () => {
       try {
         setLoading(true);
 
-        const response = await api.get(`/rooms/${roomId}`);
-
+     const response = await api.get(`/rooms/${actualRoomId}`);
         setRoom(response.data);
+
+        const studentsResponse = await api.get("/students");
+
+const roomMembers = studentsResponse.data.filter(
+  (student) => student.room_id === Number(actualRoomId)
+);
+
+setMembers(roomMembers);
       } catch (error) {
         console.error("Failed to load room:", error);
       } finally {
@@ -50,22 +42,9 @@ export default function Room() {
     };
 
     loadRoom();
-  }, [roomId]);
+}, [actualRoomId]);
 
-  const send = () => {
-    if (!value.trim()) return;
 
-    setMessages([
-      ...messages,
-      {
-        name: "You",
-        text: value.trim(),
-        time: "now",
-      },
-    ]);
-
-    setValue("");
-  };
 
   const roomName =
     room?.name ||
@@ -90,7 +69,7 @@ export default function Room() {
         action={
           <button className="secondary-btn">
             <Users size={17} />
-            {room?.member_count || "Members"}
+           {members.length} Members
           </button>
         }
       />
@@ -107,76 +86,45 @@ export default function Room() {
 
           <div className="member-search">
             <Search size={15} />
-            <input placeholder="Find a classmate" />
+            <input
+           placeholder="Find a classmate"
+           value={search}
+           onChange={(e) => setSearch(e.target.value)}
+/>
           </div>
 
-          <div className="member-item">
-            <Avatar name="Room members" online={false} />
+     {members.length === 0 ? (
+  <p className="muted">No students found in this class.</p>
+) : members.filter((member) =>
+    member.name.toLowerCase().includes(search.toLowerCase())
+  ).length === 0 ? (
+  <p className="muted">No classmates match your search.</p>
+) : (
 
-            <div>
-              <strong>Room loaded</strong>
-              <span>
-                Member list API not connected yet
-              </span>
-            </div>
-          </div>
+
+  members
+  .filter((member) =>
+    member.name.toLowerCase().includes(search.toLowerCase())
+  )
+  .map((member) => (
+   <div
+  className="member-item"
+  key={member.id}
+  onClick={() => navigate(`/profile/${member.id}`)}
+  style={{ cursor: "pointer" }}
+>
+      <Avatar name={member.name} online={false} />
+
+      <div>
+        <strong>{member.name}</strong>
+        <span>{member.college_email}</span>
+      </div>
+    </div>
+  ))
+)}
         </aside>
 
-        <section className="chat">
-          <div className="chat-header">
-            <div>
-              <Hash size={18} />
-              <strong>general</strong>
-            </div>
-
-            <MoreHorizontal size={19} />
-          </div>
-
-          <div className="chat-messages">
-            {messages.map((message, index) => (
-              <div
-                className={`message ${
-                  message.name === "You" ? "mine" : ""
-                }`}
-                key={index}
-              >
-                <Avatar name={message.name} />
-
-                <div>
-                  <div className="message-meta">
-                    <strong>{message.name}</strong>
-                    <span>{message.time}</span>
-                  </div>
-
-                  <p>{message.text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="chat-input">
-            <input
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={(e) =>
-                e.key === "Enter" && send()
-              }
-              placeholder="Message Comps-A..."
-            />
-
-            <button
-              className="primary-icon"
-              onClick={send}
-            >
-              <Send size={17} />
-            </button>
-          </div>
-
-          <p className="chat-note">
-            Realtime messaging will be connected when the
-            backend messaging/WebSocket API is available.
-          </p>
-        </section>
+       
       </div>
     </>
   );

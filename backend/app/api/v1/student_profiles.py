@@ -50,6 +50,8 @@ async def create_student_profile(
     new_profile = StudentProfile(
         student_id=student_id,
         bio=profile.bio,
+        year=profile.year,
+        branch=profile.branch,
         profile_picture=profile.profile_picture,
         github_url=profile.github_url,
         linkedin_url=profile.linkedin_url,
