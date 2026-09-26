@@ -1,6 +1,12 @@
-
 import React, { useEffect, useMemo, useState } from "react";
-import { Check, Filter, Search, Sparkles, Users, X } from "lucide-react";
+import {
+  Check,
+  Filter,
+  Search,
+  Sparkles,
+  Users,
+  X,
+} from "lucide-react";
 
 import SectionHeader from "../components/SectionHeader";
 import Avatar from "../components/Avatar";
@@ -13,6 +19,7 @@ export default function TeamBuilder() {
   const [candidates, setCandidates] = useState([]);
   const [sentInvitations, setSentInvitations] = useState([]);
   const [invitations, setInvitations] = useState([]);
+  const [myTeam, setMyTeam] = useState(null);
 
   const [search, setSearch] = useState("");
   const [skillFilter, setSkillFilter] = useState("all");
@@ -20,9 +27,17 @@ export default function TeamBuilder() {
   const [loading, setLoading] = useState(true);
   const [sendingId, setSendingId] = useState(null);
 
-  const [invitationsLoading, setInvitationsLoading] = useState(true);
+  const [invitationsLoading, setInvitationsLoading] =
+    useState(true);
+
   const [sentInvitationsLoading, setSentInvitationsLoading] =
     useState(true);
+
+  const [teamLoading, setTeamLoading] = useState(true);
+  const [creatingTeam, setCreatingTeam] = useState(false);
+
+  const [teamName, setTeamName] = useState("");
+  const [showCreateTeam, setShowCreateTeam] = useState(false);
 
   const [processingInvitationId, setProcessingInvitationId] =
     useState(null);
@@ -32,19 +47,15 @@ export default function TeamBuilder() {
 
   const [showFilters, setShowFilters] = useState(false);
 
-  /*
-   * Load candidates when Team Builder opens.
-   */
+  // Load candidates
   useEffect(() => {
     loadCandidates();
   }, []);
 
-  /*
-   * Load both received and sent invitations
-   * whenever the logged-in student is available.
-   */
+  // Load team and invitations
   useEffect(() => {
     if (user?.id) {
+      loadMyTeam();
       loadReceivedInvitations();
       loadSentInvitations();
     }
@@ -59,10 +70,7 @@ export default function TeamBuilder() {
 
       setCandidates(response.data || []);
     } catch (error) {
-      console.error(
-        "Failed to load team candidates:",
-        error
-      );
+      console.error("Failed to load team candidates:", error);
 
       setError(
         error.response?.data?.detail ||
@@ -73,9 +81,83 @@ export default function TeamBuilder() {
     }
   }
 
-  /*
-   * Load invitations received by the current student.
-   */
+  // Load current student's team
+  async function loadMyTeam() {
+    if (!user?.id) return;
+
+    try {
+      setTeamLoading(true);
+
+      const response = await api.get(
+        `/team-builder/my-team?student_id=${user.id}`
+      );
+
+      if (response.data?.team) {
+        setMyTeam(response.data);
+        setShowCreateTeam(false);
+      } else {
+        setMyTeam(null);
+      }
+    } catch (error) {
+      console.error("Failed to load current team:", error);
+
+      setError(
+        error.response?.data?.detail ||
+          "Failed to load your team."
+      );
+    } finally {
+      setTeamLoading(false);
+    }
+  }
+
+  // Create a new team
+  async function createTeam() {
+    const name = teamName.trim();
+
+    if (!user?.id) {
+      setError("You are not logged in.");
+      return;
+    }
+
+    if (!name) {
+      setError("Please enter a team name.");
+      return;
+    }
+
+    try {
+      setCreatingTeam(true);
+      setError("");
+      setSuccess("");
+
+      const response = await api.post(
+        `/team-builder/teams?student_id=${user.id}`,
+        {
+          name,
+        }
+      );
+
+      setSuccess(
+        response.data?.message ||
+          "Team created successfully."
+      );
+
+      setTeamName("");
+      setShowCreateTeam(false);
+
+      await loadMyTeam();
+    } catch (error) {
+      console.error("Failed to create team:", error);
+
+      setError(
+        error.response?.data?.detail ||
+          "Failed to create team."
+      );
+    } finally {
+      setCreatingTeam(false);
+    }
+  }
+
+  // Load received invitations
   async function loadReceivedInvitations() {
     if (!user?.id) return;
 
@@ -102,12 +184,7 @@ export default function TeamBuilder() {
     }
   }
 
-  /*
-   * Load invitations sent by the current student.
-   *
-   * This is the important part that makes invitation
-   * status survive a browser refresh.
-   */
+  // Load sent invitations
   async function loadSentInvitations() {
     if (!user?.id) return;
 
@@ -134,12 +211,17 @@ export default function TeamBuilder() {
     }
   }
 
-  /*
-   * Send a new invitation.
-   */
+  // Send invitation
   async function sendInvitation(studentId) {
     if (!user?.id) {
       setError("You are not logged in.");
+      return;
+    }
+
+    if (!myTeam?.team) {
+      setError(
+        "Create a team before inviting teammates."
+      );
       return;
     }
 
@@ -148,9 +230,6 @@ export default function TeamBuilder() {
       return;
     }
 
-    /*
-     * Check the actual backend-loaded invitation state.
-     */
     const alreadyPending = sentInvitations.some(
       (invitation) =>
         Number(invitation.receiver_id) ===
@@ -173,44 +252,23 @@ export default function TeamBuilder() {
         `/team-builder/invitations?sender_id=${user.id}&receiver_id=${studentId}`
       );
 
-      console.log(
-        "Invitation sent:",
-        response.data
-      );
+      console.log("Invitation sent:", response.data);
 
       setSuccess(
         response.data?.message ||
           "Invitation sent successfully."
       );
 
-      /*
-       * Re-fetch from backend instead of manually
-       * changing the invitation state.
-       */
       await loadSentInvitations();
     } catch (error) {
-      console.error(
-        "Failed to send invitation:",
-        error
-      );
-
-      console.error(
-        "Status:",
-        error.response?.status
-      );
-
-      console.error(
-        "Response:",
-        error.response?.data
-      );
+      console.error("Failed to send invitation:", error);
 
       const status = error.response?.status;
       const detail = error.response?.data?.detail;
 
       if (status === 400) {
         setError(
-          detail ||
-            "Invalid invitation request."
+          detail || "Invalid invitation request."
         );
       } else if (status === 404) {
         setError(
@@ -219,19 +277,13 @@ export default function TeamBuilder() {
         );
       } else if (status === 409) {
         setError(
-          detail ||
-            "An invitation is already pending."
+          detail || "Unable to send invitation."
         );
 
-        /*
-         * Backend says it already exists,
-         * so synchronize our UI with the database.
-         */
         await loadSentInvitations();
       } else {
         setError(
-          detail ||
-            "Failed to send invitation."
+          detail || "Failed to send invitation."
         );
       }
     } finally {
@@ -239,9 +291,7 @@ export default function TeamBuilder() {
     }
   }
 
-  /*
-   * Accept or reject a received invitation.
-   */
+  // Accept or reject invitation
   async function updateInvitation(
     invitationId,
     status
@@ -263,10 +313,8 @@ export default function TeamBuilder() {
           `Invitation ${status}.`
       );
 
-      /*
-       * Refresh both lists after the action.
-       */
       await Promise.all([
+        loadMyTeam(),
         loadReceivedInvitations(),
         loadSentInvitations(),
       ]);
@@ -285,10 +333,7 @@ export default function TeamBuilder() {
     }
   }
 
-  /*
-   * Convert sent invitations into a Set of
-   * receiver IDs for fast lookup.
-   */
+  // Pending invitation IDs
   const sentInvitationIds = useMemo(() => {
     return new Set(
       sentInvitations.map(
@@ -298,11 +343,15 @@ export default function TeamBuilder() {
     );
   }, [sentInvitations]);
 
-  /*
-   * Number of pending outgoing invitations.
-   */
-  const selectedCount = sentInvitations.length;
+  // Pending outgoing invitations
+  const pendingInvitationCount =
+    sentInvitations.length;
 
+  // Actual team members
+  const teamMemberCount =
+    myTeam?.members?.length || 0;
+
+  // Available skills
   const availableSkills = useMemo(() => {
     const skills = candidates.flatMap(
       (candidate) =>
@@ -314,6 +363,7 @@ export default function TeamBuilder() {
     return [...new Set(skills)].sort();
   }, [candidates]);
 
+  // Filter candidates
   const filteredCandidates = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -375,6 +425,182 @@ export default function TeamBuilder() {
           </button>
         }
       />
+
+      {/* My Team */}
+      <section
+        className="panel"
+        style={{ marginBottom: "20px" }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            marginBottom: "16px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <span className="eyebrow">
+              MY TEAM
+            </span>
+
+            <h2
+              style={{
+                margin: "4px 0 0",
+              }}
+            >
+              {teamLoading
+                ? "Loading..."
+                : myTeam?.team?.name ||
+                  "No team yet"}
+            </h2>
+          </div>
+
+          {!teamLoading && !myTeam?.team && (
+            <button
+              type="button"
+              className="primary-btn"
+              onClick={() =>
+                setShowCreateTeam(
+                  !showCreateTeam
+                )
+              }
+            >
+              <Users size={16} />
+
+              {showCreateTeam
+                ? "Cancel"
+                : "Create Team"}
+            </button>
+          )}
+        </div>
+
+        {teamLoading ? (
+          <p className="muted">
+            Loading your team...
+          </p>
+        ) : myTeam?.team ? (
+          <>
+            <p className="muted">
+              Your current team has{" "}
+              <strong>
+                {teamMemberCount}
+              </strong>{" "}
+              member
+              {teamMemberCount !== 1
+                ? "s"
+                : ""}.
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gap: "10px",
+                marginTop: "16px",
+              }}
+            >
+              {myTeam.members.map(
+                (member) => (
+                  <div
+                    key={member.student_id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      padding: "10px",
+                      border:
+                        "1px solid var(--border, #ddd)",
+                      borderRadius: "10px",
+                    }}
+                  >
+                    <Avatar
+                      name={
+                        member.name ||
+                        "Student"
+                      }
+                      online
+                    />
+
+                    <div>
+                      <strong>
+                        {member.name}
+                      </strong>
+
+                      <p
+                        className="muted"
+                        style={{
+                          margin: "2px 0 0",
+                        }}
+                      >
+                        {
+                          member.college_email
+                        }
+                      </p>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="muted">
+              You are not part of a team yet.
+              Create a team to start inviting
+              classmates.
+            </p>
+
+            {showCreateTeam && (
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  marginTop: "16px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <input
+                  type="text"
+                  placeholder="Enter team name..."
+                  value={teamName}
+                  onChange={(event) => {
+                    setTeamName(
+                      event.target.value
+                    );
+                    setError("");
+                  }}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter"
+                    ) {
+                      createTeam();
+                    }
+                  }}
+                  style={{
+                    flex: "1",
+                    minWidth: "220px",
+                  }}
+                />
+
+                <button
+                  type="button"
+                  className="primary-btn"
+                  disabled={creatingTeam}
+                  onClick={createTeam}
+                >
+                  <Users size={16} />
+
+                  {creatingTeam
+                    ? "Creating..."
+                    : "Create Team"}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </section>
 
       {/* Received Invitations */}
       <section
@@ -542,6 +768,7 @@ export default function TeamBuilder() {
         )}
       </section>
 
+      {/* Active Assignment */}
       <section className="project-brief panel">
         <div className="project-brief-icon">
           <Sparkles size={22} />
@@ -582,18 +809,23 @@ export default function TeamBuilder() {
         </div>
 
         <div className="team-size">
-          <span>Pending invitations</span>
+          <span>Team members</span>
 
           <strong>
-            {selectedCount} / 4
+            {teamMemberCount} / 4
           </strong>
 
           <small>
-            teammates invited
+            {pendingInvitationCount} pending
+            invitation
+            {pendingInvitationCount !== 1
+              ? "s"
+              : ""}
           </small>
         </div>
       </section>
 
+      {/* Search */}
       <div className="team-toolbar">
         <div className="search-field">
           <Search size={17} />
@@ -615,6 +847,7 @@ export default function TeamBuilder() {
         </span>
       </div>
 
+      {/* Filters */}
       {showFilters && (
         <div
           className="panel"
@@ -674,6 +907,7 @@ export default function TeamBuilder() {
         </div>
       )}
 
+      {/* Errors */}
       {error && (
         <div
           className="panel"
@@ -689,6 +923,7 @@ export default function TeamBuilder() {
         </div>
       )}
 
+      {/* Success */}
       {success && (
         <div
           className="panel"
@@ -702,6 +937,7 @@ export default function TeamBuilder() {
         </div>
       )}
 
+      {/* Candidates */}
       {loading ||
       sentInvitationsLoading ? (
         <div className="panel">
@@ -726,11 +962,6 @@ export default function TeamBuilder() {
               const studentId =
                 candidate.student_id;
 
-              /*
-               * IMPORTANT:
-               * This now comes from the backend.
-               * It survives browser refresh.
-               */
               const isPending =
                 sentInvitationIds.has(
                   Number(studentId)
@@ -742,6 +973,9 @@ export default function TeamBuilder() {
               const isCurrentUser =
                 Number(studentId) ===
                 Number(user?.id);
+
+              const isTeamFull =
+                teamMemberCount >= 4;
 
               const skills =
                 candidate.skills || [];
@@ -820,7 +1054,9 @@ export default function TeamBuilder() {
                     disabled={
                       isSending ||
                       isPending ||
-                      isCurrentUser
+                      isCurrentUser ||
+                      !myTeam?.team ||
+                      isTeamFull
                     }
                     onClick={() =>
                       sendInvitation(
@@ -843,8 +1079,12 @@ export default function TeamBuilder() {
                         <Users size={16} />
                         You
                       </>
-                    ) : selectedCount >=
-                      4 ? (
+                    ) : !myTeam?.team ? (
+                      <>
+                        <Users size={16} />
+                        Create Team First
+                      </>
+                    ) : isTeamFull ? (
                       <>
                         <Users size={16} />
                         Team Full

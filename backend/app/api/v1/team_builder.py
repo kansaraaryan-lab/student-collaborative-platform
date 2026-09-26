@@ -1,4 +1,3 @@
-
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,6 +10,7 @@ from backend.app.models.student_skill import StudentSkill
 from backend.app.models.team_invitation import TeamInvitation
 from backend.app.models.team import Team
 from backend.app.models.team_member import TeamMember
+from backend.app.schemas.team import TeamCreate
 from backend.app.schemas.team_invitation import TeamInvitationUpdate
 
 
@@ -19,6 +19,10 @@ router = APIRouter(
     tags=["Team Builder"],
 )
 
+
+# ---------------------------------------------------------
+# Get Team Builder Candidates
+# ---------------------------------------------------------
 
 @router.get("/candidates")
 async def get_candidates(
@@ -60,6 +64,79 @@ async def get_candidates(
     return candidates
 
 
+# ---------------------------------------------------------
+# Create Team
+# ---------------------------------------------------------
+
+@router.post("/teams")
+async def create_team(
+    student_id: int,
+    team_data: TeamCreate,
+    db: Session = Depends(get_db),
+):
+    student = (
+        db.query(Student)
+        .filter(Student.id == student_id)
+        .first()
+    )
+
+    if student is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found",
+        )
+
+    # One student can belong to only one team
+    existing_membership = (
+        db.query(TeamMember)
+        .filter(
+            TeamMember.student_id == student_id
+        )
+        .first()
+    )
+
+    if existing_membership:
+        raise HTTPException(
+            status_code=409,
+            detail="You are already a member of a team.",
+        )
+
+    team = Team(
+        name=team_data.name,
+        created_by=student_id,
+        created_at=datetime.now(timezone.utc),
+    )
+
+    db.add(team)
+    db.flush()
+
+    # Creator automatically becomes a team member
+    member = TeamMember(
+        team_id=team.id,
+        student_id=student_id,
+        joined_at=datetime.now(timezone.utc),
+    )
+
+    db.add(member)
+
+    db.commit()
+    db.refresh(team)
+
+    return {
+        "message": "Team created successfully",
+        "team": {
+            "id": team.id,
+            "name": team.name,
+            "created_by": team.created_by,
+            "created_at": team.created_at,
+        },
+    }
+
+
+# ---------------------------------------------------------
+# Send Team Invitation
+# ---------------------------------------------------------
+
 @router.post("/invitations")
 async def send_invitation(
     sender_id: int,
@@ -96,6 +173,37 @@ async def send_invitation(
             detail="Receiver student not found",
         )
 
+    # Sender must already have a team
+    sender_membership = (
+        db.query(TeamMember)
+        .filter(
+            TeamMember.student_id == sender_id
+        )
+        .first()
+    )
+
+    if sender_membership is None:
+        raise HTTPException(
+            status_code=409,
+            detail="You must create a team before sending invitations.",
+        )
+
+    # Receiver cannot already belong to a team
+    receiver_membership = (
+        db.query(TeamMember)
+        .filter(
+            TeamMember.student_id == receiver_id
+        )
+        .first()
+    )
+
+    if receiver_membership:
+        raise HTTPException(
+            status_code=409,
+            detail="Student is already a member of a team.",
+        )
+
+    # Prevent duplicate pending invitation
     existing = (
         db.query(TeamInvitation)
         .filter(
@@ -130,6 +238,10 @@ async def send_invitation(
         "status": invitation.status,
     }
 
+
+# ---------------------------------------------------------
+# Get Received Invitations
+# ---------------------------------------------------------
 
 @router.get("/invitations/received")
 async def get_received_invitations(
@@ -188,6 +300,10 @@ async def get_received_invitations(
     return result
 
 
+# ---------------------------------------------------------
+# Accept / Reject Invitation
+# ---------------------------------------------------------
+
 @router.patch("/invitations/{invitation_id}")
 async def update_invitation(
     invitation_id: int,
@@ -221,7 +337,10 @@ async def update_invitation(
             detail="Status must be accepted or rejected",
         )
 
+    # -----------------------------------------------------
     # Reject invitation
+    # -----------------------------------------------------
+
     if invitation_data.status == "rejected":
         invitation.status = "rejected"
 
@@ -236,7 +355,10 @@ async def update_invitation(
             "status": invitation.status,
         }
 
+    # -----------------------------------------------------
     # Accept invitation
+    # -----------------------------------------------------
+
     sender_id = invitation.sender_id
     receiver_id = invitation.receiver_id
 
@@ -264,7 +386,7 @@ async def update_invitation(
             detail="Receiver student not found",
         )
 
-    # Check sender's existing team
+    # Sender must already belong to a team
     sender_membership = (
         db.query(TeamMember)
         .filter(
@@ -273,7 +395,13 @@ async def update_invitation(
         .first()
     )
 
-    # Check receiver's existing team
+    if sender_membership is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Sender is not a member of a team.",
+        )
+
+    # Receiver must not already belong to a team
     receiver_membership = (
         db.query(TeamMember)
         .filter(
@@ -282,40 +410,16 @@ async def update_invitation(
         .first()
     )
 
-    # Receiver cannot join another team
     if receiver_membership:
         raise HTTPException(
             status_code=409,
             detail="You are already a member of a team.",
         )
 
-    # Sender already has a team
-    if sender_membership:
-        team_id = sender_membership.team_id
+    # Use sender's existing team
+    team_id = sender_membership.team_id
 
-    # Sender does not have a team
-    else:
-        team = Team(
-            name=f"{sender.name}'s Team",
-            created_by=sender_id,
-            created_at=datetime.now(timezone.utc),
-        )
-
-        db.add(team)
-        db.flush()
-
-        team_id = team.id
-
-        # Add sender to new team
-        sender_member = TeamMember(
-            team_id=team_id,
-            student_id=sender_id,
-            joined_at=datetime.now(timezone.utc),
-        )
-
-        db.add(sender_member)
-
-    # Add receiver to team
+    # Add receiver to sender's team
     receiver_member = TeamMember(
         team_id=team_id,
         student_id=receiver_id,
@@ -339,6 +443,10 @@ async def update_invitation(
         "status": invitation.status,
     }
 
+
+# ---------------------------------------------------------
+# Get Sent Invitations
+# ---------------------------------------------------------
 
 @router.get("/invitations/sent")
 async def get_sent_invitations(
@@ -396,6 +504,10 @@ async def get_sent_invitations(
 
     return result
 
+
+# ---------------------------------------------------------
+# Get My Team
+# ---------------------------------------------------------
 
 @router.get("/my-team")
 async def get_my_team(
@@ -471,5 +583,3 @@ async def get_my_team(
             for member, member_student in members
         ],
     }
-
-
