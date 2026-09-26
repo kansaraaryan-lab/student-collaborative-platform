@@ -69,5 +69,6 @@ async def google_login(
             "college_email": student.college_email,
             "name": student.name,
             "room_id": student.room_id,
+            "is_admin": student.is_admin,
         },
     }

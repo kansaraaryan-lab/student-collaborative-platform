@@ -11,8 +11,10 @@ import {
 
 import SectionHeader from "../components/SectionHeader";
 import api from "../api/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function Events() {
+  const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -212,6 +214,7 @@ export default function Events() {
         title="Events"
         description="Discover workshops, hackathons, meetups and academic activities."
         action={
+           user?.is_admin ? (
           <button
             className="primary-btn"
             onClick={() => {
@@ -222,6 +225,7 @@ export default function Events() {
             <Plus size={17} />
             Create event
           </button>
+           ) : null
         }
       />
 
@@ -432,31 +436,27 @@ export default function Events() {
                     {event.status}
                   </span>
 
-                  <div className="event-actions">
-                    <button
-                      className="edit-event-btn"
-                      onClick={() => editEvent(event)}
-                      title="Edit event"
-                    >
-                      <Pencil size={13} />
-                      Edit
-                    </button>
+                 {user?.is_admin && (
+  <div className="event-actions">
+    <button
+      className="edit-event-btn"
+      onClick={() => editEvent(event)}
+      title="Edit event"
+    >
+      <Pencil size={13} />
+      Edit
+    </button>
 
-                    <button
-                      className="icon-btn"
-                      onClick={() =>
-                        deleteEvent(event.id)
-                      }
-                      disabled={
-                        deletingId === event.id
-                      }
-                      title="Delete event"
-                    >
-                      {deletingId === event.id
-                        ? "..."
-                        : "Delete"}
-                    </button>
-                  </div>
+    <button
+      className="icon-btn"
+      onClick={() => deleteEvent(event.id)}
+      disabled={deletingId === event.id}
+      title="Delete event"
+    >
+      {deletingId === event.id ? "..." : "Delete"}
+    </button>
+  </div>
+)}
                 </div>
               </div>
             </article>

@@ -28,6 +28,7 @@ export function AuthProvider({ children }) {
         name: student.name,
         email: student.college_email,
         roomId: student.room_id,
+        is_admin: student.is_admin,
         avatar: student.name?.charAt(0)?.toUpperCase() || "S",
       };
 
