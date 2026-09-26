@@ -1,6 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 class Settings(BaseSettings):
     app_name: str = "Student Collaborative Platform API"
     app_version: str = "0.1.0"
@@ -11,6 +10,8 @@ class Settings(BaseSettings):
     postgres_user: str = "platform_user"
     postgres_password: str = "platform_password"
     postgres_db: str = "student_platform"
+
+    google_client_id: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

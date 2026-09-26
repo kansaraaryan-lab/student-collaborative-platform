@@ -1,28 +1,30 @@
+
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.core.database import Base
 
-class Student(Base):
-    __tablename__ = "students"
+
+class TeamInvitation(Base):
+    __tablename__ = "team_invitations"
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    college_email: Mapped[str] = mapped_column(
-        String(255),
-        unique=True,
+    sender_id: Mapped[int] = mapped_column(
+        ForeignKey("students.id"),
         nullable=False,
     )
 
-    name: Mapped[str] = mapped_column(
-        String(100),
+    receiver_id: Mapped[int] = mapped_column(
+        ForeignKey("students.id"),
         nullable=False,
     )
 
-    room_id: Mapped[int] = mapped_column(
-        ForeignKey("rooms.id"),
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="pending",
         nullable=False,
     )
 
@@ -39,8 +41,3 @@ class Student(Base):
         nullable=False,
     )
 
-    is_admin: Mapped[bool] = mapped_column(
-    Boolean,
-    default=False,
-    nullable=False,
-)
