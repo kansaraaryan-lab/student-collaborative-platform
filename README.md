@@ -720,6 +720,10 @@ Further development can focus on additional testing, production hardening, deplo
 
 ---
 
-## 📄 License
+## 📄 Project Information
 
 This project was developed as a B.Tech academic project by the Student Collaborative Platform team.
+
+## 📄 License
+
+MIT License.
