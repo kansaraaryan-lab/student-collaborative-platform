@@ -1,0 +1,78 @@
+import{
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
+import api from "../api/api.js";
+
+import { AuthContext } from "./AuthContextValue";
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem("campus_user");
+    return stored ? JSON.parse(stored) : null;
+  });
+
+  const login = useCallback ( async (credential) => {
+    try {
+      const response = await api.post("/auth/google", {
+        credential,
+      });
+
+      const student = response.data.student;
+
+      const authenticatedUser = {
+        id: student.id,
+        name: student.name,
+        email: student.college_email,
+        roomId: student.room_id,
+        is_admin: student.is_admin,
+        avatar: student.name?.charAt(0)?.toUpperCase() || "S",
+      };
+
+      localStorage.setItem(
+        "campus_user",
+        JSON.stringify(authenticatedUser)
+      );
+
+      setUser(authenticatedUser);
+
+      return {
+        success: true,
+        user: authenticatedUser,
+      };
+    } catch (error) {
+      console.error("Google login failed:", error);
+
+      const message =
+        error.response?.data?.detail ||
+        "Google login failed. Please try again.";
+
+      return {
+        success: false,
+        error: message,
+      };
+    }
+  } , []);
+
+  const logout = () => {
+    localStorage.removeItem("campus_user");
+    setUser(null);
+  };
+
+  const value = useMemo(
+    () => ({
+      user,
+      login,
+      logout,
+      isAuthenticated: Boolean(user),
+    }),
+    [user,login]
+  );
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
